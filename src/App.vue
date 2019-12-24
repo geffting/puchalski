@@ -11,7 +11,7 @@
           <v-row align="center" justify="center" class="pt-4" no-gutters>
             <v-col cols="12" sm="8">
               <v-text-field
-                v-model="userLocation"
+                v-model="address"
                 outlined
                 label="Digite o endereço"
                 color="#1e1559"
@@ -19,7 +19,7 @@
             </v-col>
             <v-col cols="12" sm="2">
               <v-btn
-                @click="getInfo"
+                @click="getCoordinates"
                 class="btn-search"
                 outlined
                 x-large
@@ -51,16 +51,43 @@ export default {
 
   data: () => ({
     information: false,
-    userLocation: null
+    address: ''
   }),
 
   methods: {
-    getInfo () {
-      this.information = true
+    getCoordinates () {
+      const ref = this
 
-      this.axios.get(``)
+      if (!ref.address) {
+        return
+      }
+
+      this.axios.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${ref.address}&key=AIzaSyCMNgEFKabcCJf2OPKLApy_FTxAWLTw--E`)
         .then((response) => {
-          console.log('google response: ', response) // eslint-disable-line no-console
+          if (response.data.results.length === 0) {
+            alert('Não encontrado')
+            return
+          }
+
+          ref.getWeatherInfo(response.data.results[0].geometry.location.lat,response.data.results[0].geometry.location.lng)
+        })
+        .catch((error) => {
+          alert(error)
+        })
+    },
+
+    getWeatherInfo (lat,lng) {
+      this.axios.get(`http://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
+        .then((response) => {
+          console.log('response.data: ', response.data) // eslint-disable-line no-console
+        })
+        .catch((error) => {
+          alert(error)
+        })
+
+      this.axios.get()
+        .then((response) => {
+          console.log(response) // eslint-disable-line no-console
         })
         .catch((error) => {
           alert(error)
