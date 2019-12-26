@@ -154,7 +154,7 @@ export default {
       }
 
       if (find == false) {
-        this.axios.get(`http://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
+        this.axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
           .then((response) => {
             ref.temperature = Math.round(response.data.main.temp)
             ref.weather = response.data.weather[0].description
@@ -181,7 +181,7 @@ export default {
           })
       }
 
-      this.axios.get(`http://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
+      this.axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
         .then((response) => {
           ref.forecast = []
 
