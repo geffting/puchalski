@@ -1,9 +1,9 @@
 <template>
   <v-app id="main-content">
     <v-container>
-      <v-row :class="[information ? '' : 'home']" align="center" no-gutters>
+      <v-row :class="[temperature ? '' : 'home']" align="center" no-gutters>
         <v-col>
-          <v-row v-if="!information" no-gutters>
+          <v-row v-if="!temperature" no-gutters>
             <v-col cols="12">
               <span class="fs-35 text-center">Previsão do tempo</span>
             </v-col>
@@ -32,7 +32,7 @@
           </v-row>
         </v-col>
       </v-row>
-      <v-row v-if="information" no-gutters>
+      <v-row v-if="temperature" no-gutters>
         <v-col cols="12">
           <v-row class="mb-10" no-gutters>
             <v-col cols="12">
@@ -72,7 +72,6 @@ export default {
   name: 'App',
 
   data: () => ({
-    information: false,
     address: '',
     temperature: null,
     weather: null,
@@ -95,7 +94,7 @@ export default {
 
       if (storedCoordinates) {
         storedCoordinates.forEach((item) => {
-          if (item.address == ref.address){
+          if (item.address == ref.address) {
             lat = item.lat
             lng = item.lng
           }
@@ -112,7 +111,7 @@ export default {
               return
             }
 
-            if(!storedCoordinates){
+            if (!storedCoordinates) {
               storedCoordinates = []
             }
 
@@ -135,20 +134,52 @@ export default {
     getWeatherInfo (lat,lng) {
       const ref = this
 
-      this.axios.get(`http://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
-        .then((response) => {
-          ref.temperature = Math.round(response.data.main.temp)
-          ref.weather = response.data.weather[0].description
-          ref.location = response.data.name
-          const today = new Date()
-          const dd = String(today.getDate()).padStart(2, '0')
-          const mm = String(today.getMonth() + 1).padStart(2, '0')
-          ref.currentDate = dd + '/' + mm
-          ref.information = true
+      let storedWeather = JSON.parse(sessionStorage.getItem('storedWeather'))
+      let find = false
+      const today = new Date()
+      const dd = String(today.getDate()).padStart(2, '0')
+      const mm = String(today.getMonth() + 1).padStart(2, '0')
+      ref.currentDate = dd + '/' + mm
+      const currentHour = today.getHours()
+
+      if (storedWeather) {
+        storedWeather.forEach((item) => {
+          if (item.lastQuery == currentHour && item.lat == lat && item.lng == lng) {
+            ref.temperature = item.temperature
+            ref.weather = item.weather
+            ref.location = item.location
+            find = true
+          }
         })
-        .catch((error) => {
-          alert(error)
-        })
+      }
+
+      if (find == false) {
+        this.axios.get(`http://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
+          .then((response) => {
+            ref.temperature = Math.round(response.data.main.temp)
+            ref.weather = response.data.weather[0].description
+            ref.location = response.data.name
+
+            const weatherInfo = {
+              "lastQuery": currentHour,
+              "temperature": Math.round(response.data.main.temp),
+              "weather": response.data.weather[0].description,
+              "location": response.data.name,
+              "lat": lat,
+              "lng": lng
+            }
+
+            if (!storedWeather) {
+              storedWeather = []
+            }
+
+            storedWeather.push(weatherInfo)
+            sessionStorage.setItem('storedWeather', JSON.stringify(storedWeather))
+          })
+          .catch((error) => {
+            alert(error)
+          })
+      }
 
       this.axios.get(`http://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
         .then((response) => {
@@ -159,7 +190,7 @@ export default {
           })
 
           let i = 0
-          for(let item of forecastList){
+          for (let item of forecastList) {
             ref.forecast.push({
                                 'id': i, 
                                 'date': item.dt_txt.substring(8,10) + '/' + item.dt_txt.substring(5,7),
