@@ -19,7 +19,7 @@
             </v-col>
             <v-col cols="12" sm="2">
               <v-btn
-                @click="getCoordinates"
+                @click="getLocationInfo"
                 class="btn-search"
                 outlined
                 x-large
@@ -82,26 +82,56 @@ export default {
   }),
 
   methods: {
-    getCoordinates () {
+    getLocationInfo () {
       const ref = this
 
-      if (!ref.address) {
+      if (!ref.address || !ref.address.trim()) {
         return
       }
 
-      this.axios.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${ref.address}&key=AIzaSyCMNgEFKabcCJf2OPKLApy_FTxAWLTw--E`)
-        .then((response) => {
-          if (response.data.results.length === 0) {
-            alert('Não encontrado')
-            return
-          }
-          ref.getWeatherInfo(response.data.results[0].geometry.location.lat,response.data.results[0].geometry.location.lng)
-        })
-        .catch((error) => {
-          alert(error)
-        })
-    },
+      let storedCoordinates = JSON.parse(localStorage.getItem('storedCoordinates'))
+      let lat
+      let lng
 
+      if (storedCoordinates) {
+        storedCoordinates.forEach((item) => {
+          if (item.address == ref.address){
+            lat = item.lat
+            lng = item.lng
+          }
+        })
+      }
+
+      if (lat && lng) {
+        ref.getWeatherInfo(lat,lng)
+      } else {
+        this.axios.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${ref.address}&key=AIzaSyCMNgEFKabcCJf2OPKLApy_FTxAWLTw--E`)
+          .then((response) => {
+            if (response.data.results.length === 0) {
+              alert('Não encontrado')
+              return
+            }
+
+            if(!storedCoordinates){
+              storedCoordinates = []
+            }
+
+            const geocode = {
+              "address": ref.address,
+              "lat": response.data.results[0].geometry.location.lat,
+              "lng": response.data.results[0].geometry.location.lng
+            }
+
+            storedCoordinates.push(geocode)
+            localStorage.setItem('storedCoordinates', JSON.stringify(storedCoordinates))
+
+            ref.getWeatherInfo(response.data.results[0].geometry.location.lat,response.data.results[0].geometry.location.lng)
+          })
+          .catch((error) => {
+            alert(error)
+          })
+      }
+    },
     getWeatherInfo (lat,lng) {
       const ref = this
 
@@ -111,8 +141,8 @@ export default {
           ref.weather = response.data.weather[0].description
           ref.location = response.data.name
           const today = new Date()
-          const dd = String(today.getDate()).padStart(2, '0');
-          const mm = String(today.getMonth() + 1).padStart(2, '0');
+          const dd = String(today.getDate()).padStart(2, '0')
+          const mm = String(today.getMonth() + 1).padStart(2, '0')
           ref.currentDate = dd + '/' + mm
           ref.information = true
         })
@@ -144,7 +174,7 @@ export default {
         })
     }
   }
-};
+}
 </script>
 <style type="text/css">
 #main-content {
