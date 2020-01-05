@@ -139,8 +139,9 @@ export default {
       const today = new Date()
       const dd = String(today.getDate()).padStart(2, '0')
       const mm = String(today.getMonth() + 1).padStart(2, '0')
+      const year = String(today.getYear())
       ref.currentDate = dd + '/' + mm
-      const currentHour = today.getHours()
+      const currentHour = dd + '/' + mm + '/' + year + ' - ' + today.getHours()
 
       if (storedWeather) {
         storedWeather.forEach((item) => {
@@ -183,7 +184,7 @@ export default {
 
       this.axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
         .then((response) => {
-          ref.forecast = []
+          const forecast = []
 
           const forecastList = response.data.list.filter( element => {
             return element.dt_txt.substring(11,13) === '12' // weather at 12h
@@ -191,7 +192,7 @@ export default {
 
           let i = 0
           for (let item of forecastList) {
-            ref.forecast.push({
+            forecast.push({
                                 'id': i, 
                                 'date': item.dt_txt.substring(8,10) + '/' + item.dt_txt.substring(5,7),
                                 'weather': item.weather[0].description,
@@ -199,6 +200,8 @@ export default {
                               })
             i++
           }
+
+          ref.forecast = forecast
         })
         .catch((error) => {
           alert(error)
