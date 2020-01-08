@@ -134,14 +134,16 @@ export default {
     getWeatherInfo (lat,lng) {
       const ref = this
 
-      let storedWeather = JSON.parse(sessionStorage.getItem('storedWeather'))
-      let find = false
       const today = new Date()
       const dd = String(today.getDate()).padStart(2, '0')
       const mm = String(today.getMonth() + 1).padStart(2, '0')
       const year = String(today.getYear())
       ref.currentDate = dd + '/' + mm
+
       const currentHour = dd + '/' + mm + '/' + year + ' - ' + today.getHours()
+
+      let storedWeather = JSON.parse(sessionStorage.getItem('storedWeather'))
+      let findCacheWeather = false
 
       if (storedWeather) {
         storedWeather.forEach((item) => {
@@ -149,12 +151,12 @@ export default {
             ref.temperature = item.temperature
             ref.weather = item.weather
             ref.location = item.location
-            find = true
+            findCacheWeather = true
           }
         })
       }
 
-      if (find == false) {
+      if (findCacheWeather === false) {
         this.axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
           .then((response) => {
             ref.temperature = Math.round(response.data.main.temp)
@@ -182,30 +184,58 @@ export default {
           })
       }
 
-      this.axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
-        .then((response) => {
-          const forecast = []
+      let storedForecast = JSON.parse(sessionStorage.getItem('storedForecast'))
+      let findCacheForecast = false
 
-          const forecastList = response.data.list.filter( element => {
-            return element.dt_txt.substring(11,13) === '12' // weather at 12h
-          })
-
-          let i = 0
-          for (let item of forecastList) {
-            forecast.push({
-                                'id': i, 
-                                'date': item.dt_txt.substring(8,10) + '/' + item.dt_txt.substring(5,7),
-                                'weather': item.weather[0].description,
-                                'temperature': Math.round(item.main.temp)
-                              })
-            i++
+      if (storedForecast) {
+        storedForecast.forEach((item) => {
+          if (item.lastQuery == currentHour && item.lat == lat && item.lng == lng) {
+            ref.forecast = item.forecast
+            findCacheForecast = true
           }
+        })
+      }
 
-          ref.forecast = forecast
-        })
-        .catch((error) => {
-          alert(error)
-        })
+      if (findCacheForecast === false) {
+        this.axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
+          .then((response) => {
+            const forecast = []
+
+            const forecastList = response.data.list.filter( element => {
+              return element.dt_txt.substring(11,13) === '12' // weather at 12h
+            })
+
+            let i = 0
+            for (let item of forecastList) {
+              forecast.push({
+                              'id': i, 
+                              'date': item.dt_txt.substring(8,10) + '/' + item.dt_txt.substring(5,7),
+                              'weather': item.weather[0].description,
+                              'temperature': Math.round(item.main.temp)
+                            })
+              i++
+            }
+
+            ref.forecast = forecast
+
+            const forecastInfo = {
+              "lastQuery": currentHour,
+              "lat": lat,
+              "lng": lng,
+              "forecast": forecast
+            }
+
+            if (!storedForecast) {
+              storedForecast = []
+            }
+
+            storedForecast.push(forecastInfo)
+            sessionStorage.setItem('storedForecast', JSON.stringify(storedForecast))
+          })
+          .catch((error) => {
+            alert(error)
+          })
+      }
     }
   }
 }
