@@ -5,17 +5,22 @@
         <v-col>
           <v-row v-if="!temperature" no-gutters>
             <v-col cols="12">
-              <span class="fs-35 text-center">Previsão do tempo</span>
+              <span class="fs-35 block text-center">Previsão do tempo</span>
             </v-col>
           </v-row>
           <v-row align="center" justify="center" class="pt-4" no-gutters>
             <v-col cols="12" sm="8">
-              <v-text-field
-                v-model="address"
-                outlined
+              <v-combobox
+                ref="searchCombobox"
+                v-model="addressDummyModel"
+                @change="onAutoCompleteSelection"
+                @keyup="customOnChangeHandler"
+                @paste="customOnChangeHandler"
+                :items="items"
                 label="Digite um local"
                 color="#1e1559"
-              />
+                outlined
+              ></v-combobox>
             </v-col>
             <v-col cols="12" sm="2">
               <v-btn
@@ -37,10 +42,10 @@
           <v-row class="mb-10" no-gutters>
             <v-col cols="12">
               <div>
-                <span class="fs-100 text-center"><b> {{ temperature }}°C </b></span>
-                <span class="fs-25 text-center"><b> {{ weather }} </b></span>
-                <span class="fs-25 text-center"> {{ location }} </span>
-                <span class="fs-25 text-center"> {{ currentDate }} </span>
+                <span class="fs-100 block text-center"><b> {{ temperature }}°C </b></span>
+                <span class="fs-25 block text-center"><b> {{ weather }} </b></span>
+                <span class="fs-25 block text-center"> {{ location }} </span>
+                <span class="fs-25 block text-center"> {{ currentDate }} </span>
               </div>
             </v-col>
           </v-row>
@@ -48,15 +53,15 @@
             <v-col cols="12">
               <v-row class="backblur" no-gutters>
                 <v-col>
-                  <span class="fs-20 text-center">Previsão</span>
+                  <span class="fs-20 block text-center">Previsão</span>
                 </v-col>
               </v-row>
               <v-row v-for="item in forecast" :key="item.id" align="center" class="backblur" no-gutters>
                 <v-col cols="6">
-                  <span class="fs-30 text-center"> {{ item.date }} </span>
+                  <span class="fs-30 block text-center"> {{ item.date }} </span>
                 </v-col>
                 <v-col cols="6">
-                  <span class="fs-20 text-center"> {{ item.temperature }}°C<br> {{ item.weather }} </span>
+                  <span class="fs-20 block text-center"> {{ item.temperature }}°C<br> {{ item.weather }} </span>
                 </v-col>
               </v-row>
             </v-col>
@@ -72,20 +77,56 @@ export default {
   name: 'App',
 
   data: () => ({
-    address: '',
+    address: null,
+    addressDummyModel: null,
     temperature: null,
     weather: null,
     location: null,
     currentDate: null,
-    forecast: []
+    forecast: [],
+    comboBoxModel: null,
+    items: []
   }),
 
+  mounted () {
+    const ref = this
+    let storedSearches = JSON.parse(localStorage.getItem('storedSearches'))
+
+    if (storedSearches) {
+      ref.items = storedSearches
+    }
+  },
+
   methods: {
+    onAutoCompleteSelection () {
+      this.address = this.addressDummyModel
+    },
+    customOnChangeHandler () {
+      const ref = this
+      setTimeout (function () {
+        if (ref.$refs.searchCombobox) {
+          ref.address = ref.$refs.searchCombobox.internalSearch
+        }
+      });
+    },
     getLocationInfo () {
       const ref = this
 
       if (!ref.address || !ref.address.trim()) {
         return
+      }
+
+      let storeAddress = true
+
+      ref.items.forEach((item) => {
+        if (item == ref.address) {
+          storeAddress = false
+        }
+      })
+
+      if (storeAddress === true) {
+        ref.items.push(ref.address)
+        localStorage.setItem('storedSearches', JSON.stringify(ref.items))
       }
 
       let storedCoordinates = JSON.parse(localStorage.getItem('storedCoordinates'))
@@ -247,7 +288,6 @@ export default {
 }
 
 span {
-  display: block;
   color: #1e1559;
 }
 
@@ -273,6 +313,10 @@ span {
 
 .fs-100 {
   font-size: 100px;
+}
+
+.block {
+  display: block;
 }
 
 #main-content .btn-search {
