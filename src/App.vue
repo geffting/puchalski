@@ -89,11 +89,10 @@ export default {
   }),
 
   mounted () {
-    const ref = this
     let storedSearches = JSON.parse(localStorage.getItem('storedSearches'))
 
     if (storedSearches) {
-      ref.items = storedSearches
+      this.items = storedSearches
     }
   },
 
@@ -102,31 +101,28 @@ export default {
       this.address = this.addressDummyModel
     },
     customOnChangeHandler () {
-      const ref = this
-      setTimeout (function () {
-        if (ref.$refs.searchCombobox) {
-          ref.address = ref.$refs.searchCombobox.internalSearch
+      setTimeout (() => {
+        if (this.$refs.searchCombobox) {
+          this.address = this.$refs.searchCombobox.internalSearch
         }
       });
     },
-    getLocationInfo () {
-      const ref = this
-
-      if (!ref.address || !ref.address.trim()) {
+    async getLocationInfo () {
+      if (!this.address || !this.address.trim()) {
         return
       }
 
       let storeAddress = true
 
-      ref.items.forEach((item) => {
-        if (item == ref.address) {
+      this.items.forEach((item) => {
+        if (item == this.address) {
           storeAddress = false
         }
       })
 
       if (storeAddress === true) {
-        ref.items.push(ref.address)
-        localStorage.setItem('storedSearches', JSON.stringify(ref.items))
+        this.items.push(this.address)
+        localStorage.setItem('storedSearches', JSON.stringify(this.items))
       }
 
       let storedCoordinates = JSON.parse(localStorage.getItem('storedCoordinates'))
@@ -135,7 +131,7 @@ export default {
 
       if (storedCoordinates) {
         storedCoordinates.forEach((item) => {
-          if (item.address == ref.address) {
+          if (item.address == this.address) {
             lat = item.lat
             lng = item.lng
           }
@@ -143,43 +139,36 @@ export default {
       }
 
       if (lat && lng) {
-        ref.getWeatherInfo(lat,lng)
+        this.getWeatherInfo(lat,lng)
       } else {
-        this.axios.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${ref.address}&key=AIzaSyCMNgEFKabcCJf2OPKLApy_FTxAWLTw--E`)
-          .then((response) => {
-            if (response.data.results.length === 0) {
-              alert('Não encontrado')
-              return
-            }
+        const response = await this.axios.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${this.address}&key=AIzaSyCMNgEFKabcCJf2OPKLApy_FTxAWLTw--E`)
+        if (response.data.results.length === 0) {
+          alert('Não encontrado')
+          return
+        }
 
-            if (!storedCoordinates) {
-              storedCoordinates = []
-            }
+        if (!storedCoordinates) {
+          storedCoordinates = []
+        }
 
-            const geocode = {
-              "address": ref.address,
-              "lat": response.data.results[0].geometry.location.lat,
-              "lng": response.data.results[0].geometry.location.lng
-            }
+        const geocode = {
+          "address": this.address,
+          "lat": response.data.results[0].geometry.location.lat,
+          "lng": response.data.results[0].geometry.location.lng
+        }
 
-            storedCoordinates.push(geocode)
-            localStorage.setItem('storedCoordinates', JSON.stringify(storedCoordinates))
+        storedCoordinates.push(geocode)
+        localStorage.setItem('storedCoordinates', JSON.stringify(storedCoordinates))
 
-            ref.getWeatherInfo(response.data.results[0].geometry.location.lat,response.data.results[0].geometry.location.lng)
-          })
-          .catch((error) => {
-            alert(error)
-          })
+        this.getWeatherInfo(response.data.results[0].geometry.location.lat,response.data.results[0].geometry.location.lng)
       }
     },
-    getWeatherInfo (lat,lng) {
-      const ref = this
-
+    async getWeatherInfo (lat,lng) {
       const today = new Date()
       const dd = String(today.getDate()).padStart(2, '0')
       const mm = String(today.getMonth() + 1).padStart(2, '0')
       const year = String(today.getYear())
-      ref.currentDate = dd + '/' + mm
+      this.currentDate = dd + '/' + mm
 
       const currentHour = dd + '/' + mm + '/' + year + ' - ' + today.getHours()
 
@@ -189,40 +178,35 @@ export default {
       if (storedWeather) {
         storedWeather.forEach((item) => {
           if (item.lastQuery == currentHour && item.lat == lat && item.lng == lng) {
-            ref.temperature = item.temperature
-            ref.weather = item.weather
-            ref.location = item.location
+            this.temperature = item.temperature
+            this.weather = item.weather
+            this.location = item.location
             findCacheWeather = true
           }
         })
       }
 
       if (findCacheWeather === false) {
-        this.axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
-          .then((response) => {
-            ref.temperature = Math.round(response.data.main.temp)
-            ref.weather = response.data.weather[0].description
-            ref.location = response.data.name
+        const response = await this.axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
+        this.temperature = Math.round(response.data.main.temp)
+        this.weather = response.data.weather[0].description
+        this.location = response.data.name
 
-            const weatherInfo = {
-              "lastQuery": currentHour,
-              "temperature": Math.round(response.data.main.temp),
-              "weather": response.data.weather[0].description,
-              "location": response.data.name,
-              "lat": lat,
-              "lng": lng
-            }
+        const weatherInfo = {
+          "lastQuery": currentHour,
+          "temperature": Math.round(response.data.main.temp),
+          "weather": response.data.weather[0].description,
+          "location": response.data.name,
+          "lat": lat,
+          "lng": lng
+        }
 
-            if (!storedWeather) {
-              storedWeather = []
-            }
+        if (!storedWeather) {
+          storedWeather = []
+        }
 
-            storedWeather.push(weatherInfo)
-            sessionStorage.setItem('storedWeather', JSON.stringify(storedWeather))
-          })
-          .catch((error) => {
-            alert(error)
-          })
+        storedWeather.push(weatherInfo)
+        sessionStorage.setItem('storedWeather', JSON.stringify(storedWeather))
       }
 
       let storedForecast = JSON.parse(sessionStorage.getItem('storedForecast'))
@@ -231,51 +215,46 @@ export default {
       if (storedForecast) {
         storedForecast.forEach((item) => {
           if (item.lastQuery == currentHour && item.lat == lat && item.lng == lng) {
-            ref.forecast = item.forecast
+            this.forecast = item.forecast
             findCacheForecast = true
           }
         })
       }
 
       if (findCacheForecast === false) {
-        this.axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
-          .then((response) => {
-            const forecast = []
+        const response = await this.axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&lang=pt&appid=812f2be4009e5f5a153fcd3410a55a0a`)
+        const forecast = []
 
-            const forecastList = response.data.list.filter( element => {
-              return element.dt_txt.substring(11,13) === '12' // weather at 12h
-            })
+        const forecastList = response.data.list.filter( element => {
+          return element.dt_txt.substring(11,13) === '12' // weather at 12h
+        })
 
-            let i = 0
-            for (let item of forecastList) {
-              forecast.push({
-                              'id': i, 
-                              'date': item.dt_txt.substring(8,10) + '/' + item.dt_txt.substring(5,7),
-                              'weather': item.weather[0].description,
-                              'temperature': Math.round(item.main.temp)
-                            })
-              i++
-            }
+        let i = 0
+        for (let item of forecastList) {
+          forecast.push({
+                          'id': i, 
+                          'date': item.dt_txt.substring(8,10) + '/' + item.dt_txt.substring(5,7),
+                          'weather': item.weather[0].description,
+                          'temperature': Math.round(item.main.temp)
+                        })
+          i++
+        }
 
-            ref.forecast = forecast
+        this.forecast = forecast
 
-            const forecastInfo = {
-              "lastQuery": currentHour,
-              "lat": lat,
-              "lng": lng,
-              "forecast": forecast
-            }
+        const forecastInfo = {
+          "lastQuery": currentHour,
+          "lat": lat,
+          "lng": lng,
+          "forecast": forecast
+        }
 
-            if (!storedForecast) {
-              storedForecast = []
-            }
+        if (!storedForecast) {
+          storedForecast = []
+        }
 
-            storedForecast.push(forecastInfo)
-            sessionStorage.setItem('storedForecast', JSON.stringify(storedForecast))
-          })
-          .catch((error) => {
-            alert(error)
-          })
+        storedForecast.push(forecastInfo)
+        sessionStorage.setItem('storedForecast', JSON.stringify(storedForecast))
       }
     }
   }
